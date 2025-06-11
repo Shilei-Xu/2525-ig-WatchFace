@@ -1,3 +1,5 @@
+
+
 let Engine = Matter.Engine,
     World = Matter.World,
     Bodies = Matter.Bodies,
@@ -78,26 +80,26 @@ function draw() {
     lastBlueBallTime = millis();
   }
 
-  // 扰动
-  balls.forEach(b => {
-    let forceMagnitude = 0.01;
-    let force = {
-      x: (random() - 0.5) * forceMagnitude,
-      y: (random() - 0.5) * forceMagnitude
-    };
-    Body.applyForce(b.body, b.body.position, force);
-  });
+  // 扰动（磁性关闭时允许扰动）
+  if (!magnetActive) {
+    balls.forEach(b => {
+      let forceMagnitude = 0.01;
+      let force = {
+        x: (random() - 0.5) * forceMagnitude,
+        y: (random() - 0.5) * forceMagnitude
+      };
+      Body.applyForce(b.body, b.body.position, force);
+    });
+  }
 
   // 磁性吸附逻辑
   if (magnetActive) {
     let angleStep = TWO_PI / baseBlueBalls.length;
 
-    for (let i = 0; i < balls.length; i++) {
-      let b = balls[i];
-      let pos = b.body.position;
-
+    // 大球吸向中心，保持动态
+    for (let b of balls) {
       if (b.radius === 60) {
-        // 大球吸向中心
+        let pos = b.body.position;
         let dir = {
           x: magnetPos.x - pos.x,
           y: magnetPos.y - pos.y
@@ -113,41 +115,65 @@ function draw() {
           });
         }
       }
-
-      if (b.radius === 20) {
-        // 小球排列在圆环上像钟表
-        let index = baseBlueBalls.indexOf(b);
-        let angle = -HALF_PI + angleStep * index;
-
-        let targetX = magnetPos.x + ringRadius * cos(angle);
-        let targetY = magnetPos.y + ringRadius * sin(angle);
-
-        let dir = {
-          x: targetX - pos.x,
-          y: targetY - pos.y
-        };
-        let mag = sqrt(dir.x * dir.x + dir.y * dir.y);
-        if (mag > 1) {
-          dir.x /= mag;
-          dir.y /= mag;
-          let strength = 0.02;
-          Body.applyForce(b.body, b.body.position, {
-            x: dir.x * strength,
-            y: dir.y * strength
-          });
-        }
-      }
     }
 
-    // 可视化中心点和圆环
+    // 蓝球吸附到圆环，距离小于阈值后静止
+    baseBlueBalls.forEach((b, i) => {
+      let pos = b.body.position;
+      let angle = -HALF_PI + angleStep * i;
+      let targetX = magnetPos.x + ringRadius * cos(angle);
+      let targetY = magnetPos.y + ringRadius * sin(angle);
+
+      let dir = {
+        x: targetX - pos.x,
+        y: targetY - pos.y
+      };
+      let distToTarget = sqrt(dir.x * dir.x + dir.y * dir.y);
+
+      if (distToTarget > 3) {
+        // 距离较远，继续吸附
+        dir.x /= distToTarget;
+        dir.y /= distToTarget;
+        let strength = 0.02;
+        Body.applyForce(b.body, b.body.position, {
+          x: dir.x * strength,
+          y: dir.y * strength
+        });
+        // 确保动态
+        if (b.body.isStatic) {
+          b.body.isStatic = false;
+        }
+      } else {
+        // 靠近则静止
+        Body.setPosition(b.body, { x: targetX, y: targetY });
+        Body.setVelocity(b.body, { x: 0, y: 0 });
+        Body.setAngularVelocity(b.body, 0);
+        b.body.isStatic = true;
+      }
+    });
+
+    // 绘制中心点和圆环
     fill(255, 0, 0);
     noStroke();
-    ellipse(magnetPos.x, magnetPos.y, 10, 10);
+    ellipse(magnetPos.x, magnetPos.y, 10);
 
     noFill();
     stroke(100, 100, 255, 80);
     strokeWeight(1.5);
     ellipse(magnetPos.x, magnetPos.y, ringRadius * 2);
+  } else {
+    // 磁性关闭，蓝球恢复动态并赋随机速度
+    baseBlueBalls.forEach(b => {
+      if (b.body.isStatic) {
+        b.body.isStatic = false;
+        let angle = random(TWO_PI);
+        let speed = random(1, 3);
+        Body.setVelocity(b.body, {
+          x: cos(angle) * speed,
+          y: sin(angle) * speed
+        });
+      }
+    });
   }
 
   // 绘制绳子
@@ -204,7 +230,7 @@ function addBlueBall() {
     let c = Constraint.create({
       bodyA: b.body,
       bodyB: w.body,
-      stiffness: magnetActive ? 0 : 0.05,
+      stiffness: magnetActive ? 0 : 0.0005,
       length: undefined
     });
     World.add(world, c);
