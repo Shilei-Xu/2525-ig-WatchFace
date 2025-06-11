@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cellular Noise Shader</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  </head>
+  <body>
+    <script>
+      let theShader;
+
+ const fragShader = `
+precision mediump float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+vec2 random2(vec2 p) {
+  return fract(sin(vec2(
+    dot(p, vec2(127.1, 311.7)),
+    dot(p, vec2(269.5, 183.3))
+  )) * 43758.5453);
+}
+
+void main() {
+  vec2 st = gl_FragCoord.xy / u_resolution.xy;
+  st.x *= u_resolution.x / u_resolution.y;
+
+  st *= 3.0;
+  vec2 i_st = floor(st);
+  vec2 f_st = fract(st);
+
+  float m_dist = 1.0;
+  float second_dist = 1.0;
+
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 neighbor = vec2(float(x), float(y));
+      vec2 point = random2(i_st + neighbor);
+      point = 0.5 + 0.5 * sin(u_time + 6.2831 * point);
+      vec2 diff = neighbor + point - f_st;
+      float dist = length(diff);
+
+      // Keep track of the smallest and second smallest distances
+      if (dist < m_dist) {
+        second_dist = m_dist;
+        m_dist = dist;
+      } else if (dist < second_dist) {
+        second_dist = dist;
+      }
+    }
+  }
+
+  // Distance between closest and second closest point
+  float edge = second_dist - m_dist;
+
+  // If distance is small, we are near a border → draw white
+  float border = smoothstep(0.005, 0.02, edge);
+
+  gl_FragColor = vec4(vec3(1.0 - border), 1.0);
+}
+`;
+
+
+      const vertShader = `
+      attribute vec3 aPosition;
+      void main() {
+        gl_Position = vec4(aPosition, 1.0);
+      }
+      `;
+
+      function setup() {
+        createCanvas(windowWidth, windowHeight, WEBGL);
+        noStroke();
+        theShader = createShader(vertShader, fragShader);
+        shader(theShader);
+      }
+
+      function draw() {
+        theShader.setUniform('u_resolution', [width, height]);
+        theShader.setUniform('u_mouse', [mouseX, height - mouseY]);
+        theShader.setUniform('u_time', millis() / 1000.0);
+        rect(0, 0, width, height);
+      }
+
+      function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+      }
+    </script>
+  </body>
+</html>
+
+<!-- This code creates a cellular noise shader using p5.js. The shader generates a dynamic noise pattern based on the mouse position and time, creating an interesting visual effect. -->
