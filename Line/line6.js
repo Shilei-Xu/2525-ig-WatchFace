@@ -151,7 +151,7 @@ function draw() {
       }
     });
 
-    // 绘制中心点和圆环
+    /* // 绘制中心点和圆环
     fill(255, 0, 0);
     noStroke();
     ellipse(magnetPos.x, magnetPos.y, 10);
@@ -160,7 +160,7 @@ function draw() {
     stroke(100, 100, 255, 80);
     strokeWeight(1.5);
     ellipse(magnetPos.x, magnetPos.y, ringRadius * 2);
-  } else {
+  } else { */
     
     
     // 磁性关闭，蓝球恢复动态并赋随机速度
