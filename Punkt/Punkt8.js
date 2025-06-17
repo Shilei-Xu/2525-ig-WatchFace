@@ -5,6 +5,7 @@ const width = 960, height = 960;
 const engine = Engine.create();
 engine.world.gravity.y = 0;
 
+// 创建渲染器
 const render = Render.create({
   element: document.body,
   engine,
@@ -18,18 +19,18 @@ const render = Render.create({
 Render.run(render);
 Matter.Runner.run(engine);
 
-// 边界
+// 创建边界
 const thickness = 50;
 World.add(engine.world, [
-  Bodies.rectangle(width/2, -thickness/2, width, thickness, { isStatic: true }),
-  Bodies.rectangle(width/2, height+thickness/2, width, thickness, { isStatic: true }),
-  Bodies.rectangle(-thickness/2, height/2, thickness, height, { isStatic: true }),
-  Bodies.rectangle(width+thickness/2, height/2, thickness, height, { isStatic: true }),
+  Bodies.rectangle(width / 2, -thickness / 2, width, thickness, { isStatic: true }),
+  Bodies.rectangle(width / 2, height + thickness / 2, width, thickness, { isStatic: true }),
+  Bodies.rectangle(-thickness / 2, height / 2, thickness, height, { isStatic: true }),
+  Bodies.rectangle(width + thickness / 2, height / 2, thickness, height, { isStatic: true }),
 ]);
 
 // 创建粒子
 const particles = [];
-for (let i = 0; i < 600; i++) {
+for (let i = 0; i < 1000; i++) {
   const p = Bodies.circle(
     Math.random() * (width - 20) + 10,
     Math.random() * (height - 20) + 10,
@@ -42,6 +43,7 @@ for (let i = 0; i < 600; i++) {
       render: { fillStyle: 'rgba(100, 200, 255, 0.8)' }
     }
   );
+  // 设置初始速度
   const ang = Math.random() * 2 * Math.PI;
   const speed = 3;
   Body.setVelocity(p, { x: Math.cos(ang) * speed, y: Math.sin(ang) * speed });
@@ -57,60 +59,46 @@ Events.on(engine, 'beforeUpdate', evt => {
       const v = p.velocity;
       const s = Math.hypot(v.x, v.y);
       if (s < p._initialSpeed && s > 0) {
-        Body.setVelocity(p, { x: v.x * p._initialSpeed/s, y: v.y * p._initialSpeed/s });
+        Body.setVelocity(p, { x: v.x * p._initialSpeed / s, y: v.y * p._initialSpeed / s });
       }
     });
   }
 });
 
+// 磁铁效果 
 let magnetBodies = [];
 let magnetSegments = [];
 let attractOn = false;
 
-// 点到线段最近距离
+// 计算点到线段的距离
 function distanceToSegment(p, p1, p2) {
   const A = p.x - p1.x;
   const B = p.y - p1.y;
   const C = p2.x - p1.x;
   const D = p2.y - p1.y;
-
   const dot = A * C + B * D;
   const len_sq = C * C + D * D;
   let param = -1;
-
-  if (len_sq !== 0) {
-    param = dot / len_sq;
-  }
-
+  if (len_sq !== 0) param = dot / len_sq;
   let xx, yy;
   if (param < 0) {
-    xx = p1.x;
-    yy = p1.y;
+    xx = p1.x; yy = p1.y;
   } else if (param > 1) {
-    xx = p2.x;
-    yy = p2.y;
+    xx = p2.x; yy = p2.y;
   } else {
     xx = p1.x + param * C;
     yy = p1.y + param * D;
   }
-
   const dx = p.x - xx;
   const dy = p.y - yy;
-
-  return {
-    distance: Math.sqrt(dx * dx + dy * dy),
-    point: { x: xx, y: yy }
-  };
+  return { distance: Math.sqrt(dx * dx + dy * dy), point: { x: xx, y: yy } };
 }
 
-// 吸附行为
+// 吸附事件
 Events.on(engine, 'beforeUpdate', () => {
   if (!attractOn || magnetSegments.length === 0) return;
-
   particles.forEach(p => {
-    let closestPoint = null;
-    let minDistance = Infinity;
-
+    let closestPoint = null, minDistance = Infinity;
     for (const segment of magnetSegments) {
       const { distance, point } = distanceToSegment(p.position, segment.p1, segment.p2);
       if (distance < minDistance) {
@@ -118,7 +106,6 @@ Events.on(engine, 'beforeUpdate', () => {
         closestPoint = point;
       }
     }
-
     if (closestPoint) {
       const dir = {
         x: closestPoint.x - p.position.x,
@@ -129,7 +116,6 @@ Events.on(engine, 'beforeUpdate', () => {
         dir.x /= len;
         dir.y /= len;
       }
-
       const speed = Math.hypot(p.velocity.x, p.velocity.y);
       if (speed > 2) {
         Body.setVelocity(p, {
@@ -137,7 +123,6 @@ Events.on(engine, 'beforeUpdate', () => {
           y: p.velocity.y * 0.95
         });
       }
-
       const strength = 0.0008 * Math.min(1, minDistance / 100);
       Body.applyForce(p, p.position, {
         x: dir.x * strength,
@@ -147,16 +132,82 @@ Events.on(engine, 'beforeUpdate', () => {
   });
 });
 
-// 点击切换吸附模式
+// 获取当前时间的数字
+function getTimeDigits() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2, '0');
+  const m = now.getMinutes().toString().padStart(2, '0');
+  return [...h, ...m];
+}
+
+// 加载数字SVG并创建磁铁
+async function loadDigitSvg(digit, offsetX, offsetY) {
+  const response = await fetch(`${digit}.svg`);
+  const svgText = await response.text();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgText, 'image/svg+xml');
+  const paths = doc.querySelectorAll('path');
+
+  const allVerts = [];
+  const allBodies = [];
+
+  paths.forEach(path => {
+    const verts = Svg.pathToVertices(path, 10);
+    const adjustedVerts = verts.map(v => ({ x: v.x + offsetX, y: v.y + offsetY }));
+    allVerts.push(adjustedVerts);
+
+    const body = Bodies.fromVertices(offsetX, offsetY, adjustedVerts, {
+      isStatic: true,
+      render: { fillStyle: 'transparent', strokeStyle: 'transparent' }
+    }, true);
+
+    if (body) {
+      allBodies.push(body);
+    }
+  });
+
+  return {
+    vertsList: allVerts,
+    bodies: allBodies
+  };
+}
+
+// 更新磁铁 
+async function updateTimeMagnet() {
+  const digits = getTimeDigits();
+  const positions = [
+    { x: 0, y: 0 },
+    { x: 480, y: 0 },
+    { x: 0, y: 480 },
+    { x: 480, y: 480 }
+  ];
+
+  World.remove(engine.world, magnetBodies);
+  magnetBodies = [];
+  magnetSegments = [];
+
+  for (let i = 0; i < digits.length; i++) {
+    const { vertsList, bodies } = await loadDigitSvg(digits[i], positions[i].x, positions[i].y);
+    magnetBodies.push(...bodies);
+
+    for (const verts of vertsList) {
+      for (let j = 0; j < verts.length - 1; j++) {
+        magnetSegments.push({ p1: verts[j], p2: verts[j + 1] });
+      }
+      magnetSegments.push({ p1: verts[verts.length - 1], p2: verts[0] }); // 闭合线
+    }
+  }
+
+  World.add(engine.world, magnetBodies);
+}
+
+// 点击事件切换磁铁状态
 window.addEventListener('click', async () => {
   if (attractOn) {
-    // 关闭吸附，恢复自由运动
     attractOn = false;
     World.remove(engine.world, magnetBodies);
     magnetBodies = [];
     magnetSegments = [];
-
-    // 重新随机设置粒子方向
     particles.forEach(p => {
       const angle = Math.random() * 2 * Math.PI;
       Body.setVelocity(p, {
@@ -164,87 +215,15 @@ window.addEventListener('click', async () => {
         y: Math.sin(angle) * p._initialSpeed
       });
     });
-
     return;
   }
-
-  // 启动吸附，加载 SVG
   attractOn = true;
-  try {
-    World.remove(engine.world, magnetBodies);
-    magnetBodies = [];
-    magnetSegments = [];
-
-    const response = await fetch('1827.svg');
-    const svgText = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(svgText, 'image/svg+xml');
-    const paths = doc.querySelectorAll('path');
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const allVerts = [];
-
-    paths.forEach(path => {
-      const verts = Svg.pathToVertices(path, 10);
-      allVerts.push(...verts);
-    });
-
-    allVerts.forEach(v => {
-      minX = Math.min(minX, v.x);
-      minY = Math.min(minY, v.y);
-      maxX = Math.max(maxX, v.x);
-      maxY = Math.max(maxY, v.y);
-    });
-
-    const svgWidth = maxX - minX;
-    const svgHeight = maxY - minY;
-    const centerX = width / 2;
-    const centerY = height / 2;
-
-    paths.forEach(path => {
-      const verts = Svg.pathToVertices(path, 10);
-      const adjustedVerts = verts.map(v => ({
-        x: centerX + (v.x - minX - svgWidth / 2),
-        y: centerY + (v.y - minY - svgHeight / 2)
-      })).filter(v => !isNaN(v.x) && !isNaN(v.y));
-
-      const body = Bodies.fromVertices(centerX, centerY, adjustedVerts, {
-        isStatic: true,
-        render: {
-          fillStyle: 'transparent',
-          strokeStyle: 'transparent',
-          lineWidth: 0
-        }
-      }, true);
-
-      if (body) {
-        magnetBodies.push(body);
-        for (let i = 0; i < adjustedVerts.length - 1; i++) {
-          magnetSegments.push({
-            p1: adjustedVerts[i],
-            p2: adjustedVerts[i + 1]
-          });
-        }
-        if (adjustedVerts.length > 2) {
-          magnetSegments.push({
-            p1: adjustedVerts[adjustedVerts.length - 1],
-            p2: adjustedVerts[0]
-          });
-        }
-      }
-    });
-
-    World.add(engine.world, magnetBodies);
-  } catch (err) {
-    console.error('Error loading SVG:', err);
-    attractOn = false;
-  }
+  await updateTimeMagnet();
 });
 
 
-
 // 调试
-(function renderDebugSegments() {
+/* (function renderDebugSegments() {
   Events.on(render, 'afterRender', () => {
     const ctx = render.context;
     ctx.save();
@@ -260,4 +239,4 @@ window.addEventListener('click', async () => {
 
     ctx.restore();
   });
-})();
+})();  */

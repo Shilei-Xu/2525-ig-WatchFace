@@ -1,5 +1,3 @@
-
-
 let Engine = Matter.Engine,
     World = Matter.World,
     Bodies = Matter.Bodies,
@@ -24,11 +22,12 @@ let baseWhiteBalls = [];
 let baseBlueBalls = [];
 
 function setup() {
+  // 创建画布和物理引擎
   canvas = createCanvas(960, 960);
   engine = Engine.create();
   world = engine.world;
   engine.gravity.y = 0;
-
+  // 初始化磁铁位置
   magnetPos = { x: width / 2, y: height / 2 };
 
   const wallThickness = 50;
@@ -162,6 +161,8 @@ function draw() {
     strokeWeight(1.5);
     ellipse(magnetPos.x, magnetPos.y, ringRadius * 2);
   } else {
+    
+    
     // 磁性关闭，蓝球恢复动态并赋随机速度
     baseBlueBalls.forEach(b => {
       if (b.body.isStatic) {
@@ -204,7 +205,7 @@ function mousePressed() {
 
     // 更新绳子弹性
     for (let c of constraints) {
-      c.stiffness = magnetActive ? 0 : 0.0005;
+      c.stiffness = magnetActive ? 0 : 0.02;
     }
   }
 }
@@ -220,23 +221,44 @@ function createBall(x, y, r, col) {
 }
 
 function addBlueBall() {
-  let b = createBall(random(width), random(height), 20, color(150, 200, 255));
+  let x, y;
+
+  if (magnetActive) {
+    // 永远从顶点生成（正上方）
+    let angle = -HALF_PI;
+    x = magnetPos.x + ringRadius * cos(angle);
+    y = magnetPos.y + ringRadius * sin(angle);
+  } else {
+    // 自由生成
+    x = random(width);
+    y = random(height);
+  }
+
+  let b = createBall(x, y, 20, color(150, 200, 255));
   balls.push(b);
   baseBlueBalls.push(b);
   blueBallCount++;
 
-  // 每个蓝球与每个白球连接
+
+  // 与所有白球建立连接
   for (let w of baseWhiteBalls) {
     let c = Constraint.create({
       bodyA: b.body,
       bodyB: w.body,
-      stiffness: magnetActive ? 0 : 0.0005,
+      stiffness: magnetActive ? 0 : 0.05,
       length: undefined
     });
     World.add(world, c);
     constraints.push(c);
   }
+
+  // 如果磁性开启，让小球立即静止（吸附后保持稳定）
+  if (magnetActive) {
+    Body.setVelocity(b.body, { x: 50, y: 0 });
+    Body.setAngularVelocity(b.body, 0);
+  }
 }
+
 
 function resetBlueBalls() {
   for (let b of baseBlueBalls) {

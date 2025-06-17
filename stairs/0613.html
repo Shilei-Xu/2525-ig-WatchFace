@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Matter.js 移动楼梯与小球</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script>
+    const { Engine, Render, Runner, World, Bodies, Body, Composite, Composites, Events, Mouse, MouseConstraint } = Matter;
+
+    const engine = Engine.create();
+    const world = engine.world;
+
+    const width = 800;
+    const height = 600;
+
+    const render = Render.create({
+        element: document.body,
+        engine: engine,
+        options: {
+            width,
+            height,
+            wireframes: false,
+            background: '#111',
+        }
+    });
+
+    Render.run(render);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    // 创建移动楼梯
+    const stairCount = Math.floor(height / 50);
+    const stairs = Composites.stack(0, 0, stairCount + 2, 1, 0, 0, function(x, y, column) {
+        return Bodies.rectangle(x - 50, y + column * 50, 100, 1000, {
+            isStatic: true,
+            render: {
+                fillStyle: '#555'
+            }
+        });
+    });
+
+    World.add(world, stairs);
+
+    // 创建一个小球
+    const ball = Bodies.circle(200, 100, 20, {
+        restitution: 0.6,
+        render: {
+            fillStyle: '#f55'
+        }
+    });
+
+    World.add(world, ball);
+
+    // 鼠标控制
+    const mouse = Mouse.create(render.canvas);
+    const mouseConstraint = MouseConstraint.create(engine, {
+        mouse,
+        constraint: {
+            stiffness: 0.2,
+            render: { visible: false }
+        }
+    });
+
+    World.add(world, mouseConstraint);
+    render.mouse = mouse;
+
+    // 更新楼梯位置循环动画
+    Events.on(engine, 'afterUpdate', function(event) {
+        const delta = event.delta / 1000; // 秒
+        for (let i = 0; i < stairs.bodies.length; i++) {
+            const stair = stairs.bodies[i];
+            Body.translate(stair, { x: -30 * delta, y: -30 * delta });
+
+            // 超出左边则回到最右边
+            if (stair.position.x < -50) {
+                Body.setPosition(stair, {
+                    x: 50 * (stairs.bodies.length - 1),
+                    y: height + 50
+                });
+                Body.setVelocity(stair, { x: 0, y: 0 });
+            }
+        }
+    });
+</script>
+</body>
+</html>
