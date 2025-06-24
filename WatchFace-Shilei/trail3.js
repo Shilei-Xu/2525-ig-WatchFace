@@ -22,53 +22,24 @@ function draw() {
   background(100);
   Engine.update(engine);
 
-  // 主粒子（暂时未使用）
-  if (mainParticle) {
-    mainParticle.update();
-    mainParticle.show();
-    if (mainParticle.r < 5 || mainParticle.opacity < 10 || mainParticle.body.position.y > height + 100) {
-      World.remove(world, mainParticle.body);
-      mainParticle = null;
-    }
-  }
-
-  // 鼠标拖尾（暂时未启用）
-  for (let i = trailParticles.length - 1; i >= 0; i--) {
-    let p = trailParticles[i];
-    p.update();
-    p.show();
-    if (p.r < 2 || p.opacity < 5) {
-      trailParticles.splice(i, 1);
-    }
-  }
-
   // 更新并显示时钟指针轨迹
-  for (let i = hourTrail.length - 1; i >= 0; i--) {
-    hourTrail[i].update();
-    hourTrail[i].show();
-    if (hourTrail[i].r < 1 || hourTrail[i].opacity < 5) {
-      hourTrail.splice(i, 1);
-    }
-  }
-  for (let i = minuteTrail.length - 1; i >= 0; i--) {
-    minuteTrail[i].update();
-    minuteTrail[i].show();
-    if (minuteTrail[i].r < 1 || minuteTrail[i].opacity < 5) {
-      minuteTrail.splice(i, 1);
-    }
-  }
-  for (let i = secondTrail.length - 1; i >= 0; i--) {
-    secondTrail[i].update();
-    secondTrail[i].show();
-    if (secondTrail[i].r < 1 || secondTrail[i].opacity < 5) {
-      secondTrail.splice(i, 1);
-    }
-  }
+  updateAndShowTrail(hourTrail);
+  updateAndShowTrail(minuteTrail);
+  updateAndShowTrail(secondTrail);
 
   drawClockArms();
 }
 
-// 粒子类
+function updateAndShowTrail(trailArray) {
+  for (let i = trailArray.length - 1; i >= 0; i--) {
+    trailArray[i].update();
+    trailArray[i].show();
+    if (trailArray[i].r < 1 || trailArray[i].opacity < 5) {
+      trailArray.splice(i, 1);
+    }
+  }
+}
+
 class Particle {
   constructor(x, y) {
     this.r = random(40, 60);
@@ -95,30 +66,28 @@ class Particle {
   }
 }
 
-// 拖尾粒子
 class TrailParticle {
   constructor(x, y, r) {
     this.x = x;
     this.y = y;
     this.r = r;
-    this.opacity = 200;
+    this.opacity = 220;
   }
   update() {
-    this.r *= 0.98;
-    this.opacity *= 0.95;
+    this.r *= 0.99;        // 慢慢变小
+    this.opacity *= 0.97;  // 慢慢淡出
   }
   show() {
     push();
     translate(this.x, this.y);
-    stroke(0);
-    strokeWeight(1);
+    noStroke();
     fill(255, this.opacity);
     ellipse(0, 0, this.r * 2);
     pop();
   }
 }
 
-// 时钟指针和轨迹粒子生成
+// 时钟指针和拖尾粒子
 function drawClockArms() {
   push();
   translate(width / 2, height / 2);
@@ -137,9 +106,10 @@ function drawClockArms() {
   let hourX = cos(hourAngle - HALF_PI) * 120;
   let hourY = sin(hourAngle - HALF_PI) * 120;
 
-  secondTrail.push(new TrailParticle(width / 2 + secX, height / 2 + secY, 6));
-  minuteTrail.push(new TrailParticle(width / 2 + minX, height / 2 + minY, 8));
-  hourTrail.push(new TrailParticle(width / 2 + hourX, height / 2 + hourY, 10));
+  // 更大的球体拖尾
+  secondTrail.push(new TrailParticle(width / 2 + secX, height / 2 + secY, 14));
+  minuteTrail.push(new TrailParticle(width / 2 + minX, height / 2 + minY, 18));
+  hourTrail.push(new TrailParticle(width / 2 + hourX, height / 2 + hourY, 22));
 
   if (secondTrail.length > 100) secondTrail.shift();
   if (minuteTrail.length > 100) minuteTrail.shift();
