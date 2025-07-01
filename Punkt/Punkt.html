@@ -25,7 +25,44 @@
   </style>
 
   <body>
-      <!-- Dein Spielcode -->
-    <script src="punktw1.js"></script>
-  </body>
+  <script>
+    async function setupDeviceMotion() {
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+      ) {
+        try {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === "granted") {
+            window.addEventListener("deviceorientation", handleOrientation);
+          } else {
+            alert("请允许陀螺仪权限以启用重力感应！");
+          }
+        } catch (e) {
+          alert("权限请求失败：" + e);
+        }
+      } else {
+        // 桌面或无需权限的浏览器
+        window.addEventListener("deviceorientation", handleOrientation);
+      }
+    }
+
+    function handleOrientation(event) {
+      const gamma = event.gamma || 0; // 左右倾斜（X轴）
+      const beta = event.beta || 0;   // 前后倾斜（Y轴）
+
+      if (window.engine) {
+        const gx = gamma / 30; // 调整灵敏度
+        const gy = beta / 30;
+        engine.world.gravity.x = Math.max(-1, Math.min(1, gx));
+        engine.world.gravity.y = Math.max(-1, Math.min(1, gy));
+      }
+    }
+
+    window.addEventListener("click", setupDeviceMotion);
+  </script>
+
+  <script src="punktw3 copy.js"></script>
+</body>
+
 </html>

@@ -29,7 +29,7 @@ World.add(engine.world, [
 
 // 创建白色随机形状粒子，尺寸更大
 function createRandomShape(x, y) {
-  const size = 60 + Math.random() * 2; // 半径或边长6~8
+  const size = 30 + Math.random() * 2; // 半径或边长6~8
   const options = {
     restitution: 0.5,
     friction: 0,
@@ -45,7 +45,7 @@ function createRandomShape(x, y) {
 
 // 生成100个粒子，从顶部随机x，y在-100~-10之间，刚体无初速度
 const particles = [];
-for (let i = 0; i < 300; i++) {
+for (let i = 0; i < 800; i++) {
   const x = Math.random() * (width - 20) + 10;
   const y = Math.random() * -90 - 10;  // 顶部上方随机位置，让它自然落下
   const p = createRandomShape(x, y);

@@ -30,17 +30,17 @@ World.add(engine.world, [
 
 // 创建粒子
 const particles = [];
-for (let i = 0; i < 3000; i++) {
+for (let i = 0; i < 1500; i++) {
   const p = Bodies.circle(
     Math.random() * (width - 20) + 10,
     Math.random() * (height - 20) + 10,
-    2,
+    4,
     {
       restitution: 1,
       friction: 0,
       frictionAir: 0,
       inertia: Infinity,
-      render: { fillStyle: 'rgba(249, 255, 81, 0.8)' }
+      render: { fillStyle: 'rgba(51, 241, 255, 0.8)' }
     }
   );
   // 设置初始速度

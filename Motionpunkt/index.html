@@ -1,46 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Motion Sensor Demo with Ball</title>
-  <style>
-    body {
-      margin: 0; 
-      overflow: hidden; 
-      background: #111; 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      height: 100vh; 
-      position: relative;
-    }
-    #ball {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      background: white;
-      border-radius: 50%;
-      left: calc(50% - 25px);
-      top: calc(50% - 25px);
-      box-shadow: 0 0 15px white;
-      transition: left 0.05s linear, top 0.05s linear;
-    }
-    #btnPermission {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 18px;
-      padding: 10px 20px;
-      z-index: 10;
-    }
-  </style>
-</head>
-<body>
-  <button id="btnPermission">Request Motion Permission</button>
-  <div id="ball"></div>
 
-  <script src="motion.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+  <!-- p5js -->
+  <script src="/libraries/p5.js" type="text/javascript"></script>
+  <script src="/libraries/p5.sound.js" type="text/javascript"></script>
+
+  <!-- matter.js -->
+  <script type="text/javascript" src="/libraries/decomp.min.js"></script>
+  <script type="text/javascript" src="/libraries/pathseg.js"></script>
+  <script type="text/javascript" src="/libraries/matter.js"></script>
+  </head>
+
+  <style>
+    html, body {
+      margin: 40px;
+      padding: 0;
+      width: 960px;
+      height: 960px;
+      overflow: hidden;
+      background-color: #222;
+    }
+    
+  </style>
+
+  <body>
+  <script>
+    async function setupDeviceMotion() {
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+      ) {
+        try {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === "granted") {
+            window.addEventListener("deviceorientation", handleOrientation);
+          } else {
+            alert("请允许陀螺仪权限以启用重力感应！");
+          }
+        } catch (e) {
+          alert("权限请求失败：" + e);
+        }
+      } else {
+        // 桌面或无需权限的浏览器
+        window.addEventListener("deviceorientation", handleOrientation);
+      }
+    }
+
+    function handleOrientation(event) {
+      const gamma = event.gamma || 0; // 左右倾斜（X轴）
+      const beta = event.beta || 0;   // 前后倾斜（Y轴）
+
+      if (window.engine) {
+        const gx = gamma / 30; // 调整灵敏度
+        const gy = beta / 30;
+        engine.world.gravity.x = Math.max(-1, Math.min(1, gx));
+        engine.world.gravity.y = Math.max(-1, Math.min(1, gy));
+      }
+    }
+
+    window.addEventListener("click", setupDeviceMotion);
+  </script>
+
+  <script src="Punkt8-M.js"></script>
 </body>
+
 </html>
